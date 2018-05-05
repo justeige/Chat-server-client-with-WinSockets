@@ -9,6 +9,7 @@
 #include <memory>
 
 
+
 enum AddressFamilySpecification {
     AFS_Unspecified = AF_UNSPEC,
     AFS_IPv4 = AF_INET,
@@ -18,7 +19,17 @@ enum AddressFamilySpecification {
 
 class Server {
 public:
-    Server(int port) : m_port(port) {}
+    Server(int port) : m_port(port), m_socket(INVALID_SOCKET)
+    {
+        ZeroMemory(&m_address, sizeof(m_address));
+    }
+
+    ~Server()
+    {
+
+        closesocket(m_socket);
+        WSACleanup();
+    }
 
     void init()
     {
@@ -64,6 +75,16 @@ public:
         if (newClientSocket == INVALID_SOCKET) {
             std::cerr << "Client socket binding failed!\n";
             std::exit(EXIT_FAILURE);
+        }
+
+        std::cout << "A client connected to the server!\n";
+    }
+
+    void shutdown()
+    {
+        auto result = ::shutdown(m_socket, SD_SEND);
+        if (result == SOCKET_ERROR) {
+            std::cerr << "shutdown failed: " << WSAGetLastError() << '\n';
         }
     }
 

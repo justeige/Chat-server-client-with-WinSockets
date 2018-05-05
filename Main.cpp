@@ -11,5 +11,6 @@ int main(int argc, char** argv)
     Server server(54000);
     server.init();
     server.listen();
+    server.shutdown();
     return EXIT_SUCCESS;
 }
