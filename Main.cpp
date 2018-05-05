@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "Server.h"
+#include "Client.h"
 
 // external libs
 #pragma comment(lib, "ws2_32.lib")
