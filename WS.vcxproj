@@ -21,6 +21,9 @@
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Visual Studio 2017\Projects\Winsocket\WinsockTests\WS\Server.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{94F5FA6C-CC94-43E8-A136-E15DA128538C}</ProjectGuid>
