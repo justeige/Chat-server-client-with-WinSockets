@@ -8,7 +8,8 @@
 #include <iostream>
 #include <memory>
 #include <vector>
-
+#include <array>
+#include <thread>
 
 enum AddressFamilySpecification {
     AFS_Unspecified = AF_UNSPEC,
@@ -16,11 +17,29 @@ enum AddressFamilySpecification {
     AFS_IPv6 = AF_INET6
 };
 
+// functor that will listen for incoming messages
+class Listener {
+public:
+    Listener(SOCKET s) : socket(s) {}
+
+    void operator()() const
+    {
+        std::array<char, 512> buffer{};
+        for (;;) {
+            ::recv(socket, buffer.data(), buffer.size(), NULL);
+
+            std::cout << buffer.data() << '\n'; // not threadsafe!
+        }
+    }
+
+    SOCKET socket;
+};
 
 class Server {
 
     // internal types
     using Connections = std::vector<SOCKET>;
+    using Threads     = std::vector<std::thread>;
 
 public:
     Server(int port) : m_port(port), m_socket(INVALID_SOCKET)
@@ -88,6 +107,9 @@ public:
             ::send(newClient, welcome, sizeof(welcome), NULL);
 
             m_clients.emplace_back(newClient);
+            const std::size_t id = m_clients.size();
+
+            m_threads.emplace_back(Listener{ newClient });
         }
     }
 
@@ -104,9 +126,20 @@ public:
         }
     }
 
+    void ReceiveMessagesFromClient(std::size_t id)
+    {
+        std::array<char, 512> buffer{};
+        for (;;) {
+            ::recv(m_clients[id], buffer.data(), buffer.size(), NULL);
+
+            std::cout << buffer.data() << '\n'; // not threadsafe!
+        }
+    }
+
 protected:
     int m_port = 0;
     SOCKET m_socket;
     sockaddr_in m_address;
     Connections m_clients;
+    Threads m_threads;
 };
