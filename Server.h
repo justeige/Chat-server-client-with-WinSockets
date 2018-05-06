@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 
 enum AddressFamilySpecification {
@@ -17,6 +18,10 @@ enum AddressFamilySpecification {
 
 
 class Server {
+
+    // internal types
+    using Connections = std::vector<SOCKET>;
+
 public:
     Server(int port) : m_port(port), m_socket(INVALID_SOCKET)
     {
@@ -69,17 +74,21 @@ public:
         sockaddr_in client = {};
         int size = sizeof(client);
 
-        SOCKET newClientSocket = accept(m_socket, (sockaddr*)&client, &size);
-        if (newClientSocket == INVALID_SOCKET) {
-            std::cerr << "Client socket binding failed!\n";
-            std::exit(EXIT_FAILURE);
+        for (;;) {
+            SOCKET newClient = ::accept(m_socket, (sockaddr*)&client, &size);
+            if (newClient == INVALID_SOCKET) {
+                std::cerr << "Client socket binding failed!\n";
+                std::exit(EXIT_FAILURE);
+            }
+
+            std::cout << "A client connected to the server!\n";
+
+            // send a welcome message to the client to verify the connection
+            char welcome[512] = "Welcome! You connected to the server!";
+            ::send(newClient, welcome, sizeof(welcome), NULL);
+
+            m_clients.emplace_back(newClient);
         }
-
-        std::cout << "A client connected to the server!\n";
-
-        // send a welcome message to the client to verify the connection
-        char welcome[512] = "Welcome! You connected to the server!";
-        ::send(newClientSocket, welcome, sizeof(welcome), NULL);
     }
 
     void wait()
@@ -99,4 +108,5 @@ protected:
     int m_port = 0;
     SOCKET m_socket;
     sockaddr_in m_address;
+    Connections m_clients;
 };
