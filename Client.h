@@ -62,11 +62,18 @@ public:
     void listen()
     {
         // wait for a welcome message of the server
-        //std::array<char, 512> answer{};
-        //::recv(m_socket, answer.data(), answer.size(), NULL);
-        char answer[512] = {};
-        ::recv(m_socket, answer, sizeof(answer), NULL);
-        std::cout << "From Server: " << answer << '\n';
+        std::array<char, 512> answer{};
+        ::recv(m_socket, answer.data(), answer.size(), NULL);
+        std::cout << "From Server: " << answer.data() << '\n';
+    }
+
+    void send()
+    {
+        std::array<char, 512> buffer;
+        for (;;) {
+            std::cin.getline(buffer.data(), buffer.size());
+            ::send(m_socket, buffer.data(), buffer.size(), NULL);
+        }
     }
 
 protected:
