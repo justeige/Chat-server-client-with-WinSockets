@@ -9,7 +9,6 @@
 #include <memory>
 
 
-
 enum AddressFamilySpecification {
     AFS_Unspecified = AF_UNSPEC,
     AFS_IPv4 = AF_INET,
@@ -26,7 +25,6 @@ public:
 
     ~Server()
     {
-
         closesocket(m_socket);
         WSACleanup();
     }
@@ -78,6 +76,15 @@ public:
         }
 
         std::cout << "A client connected to the server!\n";
+
+        // send a welcome message to the client to verify the connection
+        char welcome[512] = "Welcome! You connected to the server!";
+        ::send(newClientSocket, welcome, sizeof(welcome), NULL);
+    }
+
+    void wait()
+    {
+        for (;;) {}
     }
 
     void shutdown()

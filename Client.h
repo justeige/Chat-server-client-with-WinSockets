@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <iostream>
 #include <memory>
+#include <array>
 
 const std::string LocalServer = "127.0.0.1";
 
@@ -56,6 +57,16 @@ public:
             std::cerr << "Can't connect to server, Err=" << WSAGetLastError() << '\n';
             std::exit(EXIT_FAILURE);
         }
+    }
+
+    void listen()
+    {
+        // wait for a welcome message of the server
+        //std::array<char, 512> answer{};
+        //::recv(m_socket, answer.data(), answer.size(), NULL);
+        char answer[512] = {};
+        ::recv(m_socket, answer, sizeof(answer), NULL);
+        std::cout << "From Server: " << answer << '\n';
     }
 
 protected:
