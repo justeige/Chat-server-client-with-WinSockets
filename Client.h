@@ -9,6 +9,7 @@
 #include <iostream>
 #include <memory>
 #include <array>
+#include <string>
 
 const std::string LocalServer = "127.0.0.1";
 
@@ -69,10 +70,15 @@ public:
 
     void send()
     {
-        std::array<char, 512> buffer;
+        // - take input from std::cin
+        // - send the length of the input
+        // - send the input as msg
+        std::string message;
         for (;;) {
-            std::cin.getline(buffer.data(), buffer.size());
-            ::send(m_socket, buffer.data(), buffer.size(), NULL);
+            std::getline(std::cin, message);
+            std::size_t msgLength = message.size();
+            ::send(m_socket, (char*)&msgLength, sizeof(int), NULL);
+            ::send(m_socket, message.c_str(), msgLength, NULL);
         }
     }
 

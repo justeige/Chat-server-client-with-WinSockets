@@ -11,6 +11,15 @@
 #include <array>
 #include <thread>
 
+// helper function
+std::ostream& operator << (std::ostream& os, std::vector<char> vec)
+{
+    for (auto c : vec) {
+        os << c;
+    }
+    return os;
+}
+
 enum AddressFamilySpecification {
     AFS_Unspecified = AF_UNSPEC,
     AFS_IPv4 = AF_INET,
@@ -24,11 +33,16 @@ public:
 
     void operator()() const
     {
-        std::array<char, 512> buffer{};
+        // receive first the message length, than the real message
+        int msgLength;
         for (;;) {
-            ::recv(socket, buffer.data(), buffer.size(), NULL);
 
-            std::cout << buffer.data() << '\n'; // not threadsafe!
+            ::recv(socket, (char*)&msgLength, sizeof(int), NULL);
+
+            std::vector<char> buffer(msgLength);
+
+            ::recv(socket, &buffer[0], msgLength, NULL);
+            std::cout << buffer << '\n'; // not threadsafe!
         }
     }
 
