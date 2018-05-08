@@ -23,6 +23,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Client.h" />
+    <ClInclude Include="Message.h" />
     <ClInclude Include="Server.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -11,6 +11,8 @@
 #include <array>
 #include <string>
 
+#include "Message.h"
+
 const std::string LocalServer = "127.0.0.1";
 
 class Client {
@@ -76,9 +78,7 @@ public:
         std::string message;
         for (;;) {
             std::getline(std::cin, message);
-            std::size_t msgLength = message.size();
-            ::send(m_socket, (char*)&msgLength, sizeof(int), NULL);
-            ::send(m_socket, message.c_str(), msgLength, NULL);
+            send({ message });
         }
     }
 
@@ -86,4 +86,10 @@ protected:
     int m_port;
     SOCKET m_socket;
     sockaddr_in m_address;
+
+    void send(Message const& msg)
+    {
+        ::send(m_socket, msg.head(), sizeof(int32_t), NULL);
+        ::send(m_socket, msg.body(), msg.length(),    NULL);
+    }
 };
