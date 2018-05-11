@@ -10,10 +10,42 @@
 #include <memory>
 #include <array>
 #include <string>
+#include <thread>
 
 #include "Message.h"
 
 const std::string LocalServer = "127.0.0.1";
+
+// functor that will listen for incoming messages
+class CListener {
+public:
+    CListener(SOCKET& s)
+        : m_socket(s) {}
+
+    void operator()() const
+    {
+        // receive first the message length, than the real message
+        int msgLength;
+        for (;;) {
+
+            if (SOCKET_ERROR == ::recv(m_socket, (char*)&msgLength, sizeof(int), NULL)) {
+                break;
+            }
+
+            std::vector<char> buffer(msgLength);
+
+            if (SOCKET_ERROR == ::recv(m_socket, &buffer[0], msgLength, NULL)) {
+                break;
+            }
+            std::cout << buffer << '\n'; // not threadsafe!
+        }
+        std::cout << "lost connection to the server!\n";
+        closesocket(m_socket);
+    }
+
+private:
+    SOCKET & m_socket;
+};
 
 class Client {
 public:
@@ -68,6 +100,8 @@ public:
         std::array<char, 512> answer{};
         ::recv(m_socket, answer.data(), answer.size(), NULL);
         std::cout << "From Server: " << answer.data() << '\n';
+
+        m_listener = std::thread(CListener{ m_socket });
     }
 
     void send(std::istream& in)
@@ -87,6 +121,7 @@ protected:
     int m_port;
     SOCKET m_socket;
     sockaddr_in m_address;
+    std::thread m_listener;
 
     void send(Message const& msg)
     {

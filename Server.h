@@ -29,7 +29,8 @@ enum AddressFamilySpecification {
 // functor that will listen for incoming messages
 class Listener {
 public:
-    Listener(SOCKET& s) : m_socket(s) {}
+    Listener(SOCKET& s, std::size_t id, std::vector<SOCKET>& other)
+        : m_socket(s), m_id(id), m_otherClients(other) {}
 
     void operator()() const
     {
@@ -46,7 +47,14 @@ public:
             if (SOCKET_ERROR == ::recv(m_socket, &buffer[0], msgLength, NULL)) {
                 break;
             }
-            std::cout << buffer << '\n'; // not threadsafe!
+
+            // parrot the message back to all other sockets
+            for (auto client : m_otherClients) {
+                if (client == m_socket) { continue; } // don't 'echo' a client
+
+                ::send(client, (char*)&msgLength, sizeof(int), NULL);
+                ::send(client, &buffer[0], msgLength, NULL);
+            }
         }
         std::cout << "lost connection to a client!\n";
         closesocket(m_socket);
@@ -54,6 +62,8 @@ public:
 
 private:
     SOCKET& m_socket;
+    std::size_t m_id;
+    std::vector<SOCKET>& m_otherClients;
 };
 
 class Server {
@@ -130,7 +140,7 @@ public:
             m_clients.emplace_back(newClient);
             const std::size_t id = m_clients.size();
 
-            m_threads.emplace_back(Listener{ newClient });
+            m_threads.emplace_back(Listener{ newClient, id, m_clients });
         }
     }
 
@@ -144,16 +154,6 @@ public:
         auto result = ::shutdown(m_socket, SD_SEND);
         if (result == SOCKET_ERROR) {
             std::cerr << "shutdown failed: " << WSAGetLastError() << '\n';
-        }
-    }
-
-    void ReceiveMessagesFromClient(std::size_t id)
-    {
-        std::array<char, 512> buffer{};
-        for (;;) {
-            ::recv(m_clients[id], buffer.data(), buffer.size(), NULL);
-
-            std::cout << buffer.data() << '\n'; // not threadsafe!
         }
     }
 
