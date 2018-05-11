@@ -70,26 +70,37 @@ public:
         std::cout << "From Server: " << answer.data() << '\n';
     }
 
-    void send()
+    void send(std::istream& in)
     {
         // - take input from std::cin
         // - send the length of the input
         // - send the input as msg
         std::string message;
         for (;;) {
-            std::getline(std::cin, message);
+            std::getline(in, message);
             send({ message });
         }
     }
 
 protected:
+
     int m_port;
     SOCKET m_socket;
     sockaddr_in m_address;
 
     void send(Message const& msg)
     {
-        ::send(m_socket, msg.head(), sizeof(int32_t), NULL);
-        ::send(m_socket, msg.body(), msg.length(),    NULL);
+        send(msg.length());
+        ::send(m_socket, msg.body(), msg.length(), NULL);
+    }
+
+    bool send(int value)
+    {
+        return ::send(m_socket, (char*)&value, sizeof(int), NULL) != SOCKET_ERROR;
+    }
+
+    bool get(int& value)
+    {
+        return ::recv(m_socket, (char*)&value, sizeof(int), NULL) != SOCKET_ERROR;
     }
 };

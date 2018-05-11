@@ -21,7 +21,7 @@ int main(int argc, char** argv)
     client.init();
     client.connect(LocalServer);
     client.listen();
-    client.send();
+    client.send(std::cin);
 #endif
     return EXIT_SUCCESS;
 }

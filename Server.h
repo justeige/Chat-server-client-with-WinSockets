@@ -29,7 +29,7 @@ enum AddressFamilySpecification {
 // functor that will listen for incoming messages
 class Listener {
 public:
-    Listener(SOCKET s) : socket(s) {}
+    Listener(SOCKET& s) : m_socket(s) {}
 
     void operator()() const
     {
@@ -37,16 +37,23 @@ public:
         int msgLength;
         for (;;) {
 
-            ::recv(socket, (char*)&msgLength, sizeof(int), NULL);
+            if (SOCKET_ERROR == ::recv(m_socket, (char*)&msgLength, sizeof(int), NULL)) {
+                break;
+            }
 
             std::vector<char> buffer(msgLength);
 
-            ::recv(socket, &buffer[0], msgLength, NULL);
+            if (SOCKET_ERROR == ::recv(m_socket, &buffer[0], msgLength, NULL)) {
+                break;
+            }
             std::cout << buffer << '\n'; // not threadsafe!
         }
+        std::cout << "lost connection to a client!\n";
+        closesocket(m_socket);
     }
 
-    SOCKET socket;
+private:
+    SOCKET& m_socket;
 };
 
 class Server {
