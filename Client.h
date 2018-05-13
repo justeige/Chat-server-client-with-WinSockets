@@ -14,107 +14,17 @@
 
 #include "Message.h"
 
-const std::string LocalServer = "127.0.0.1";
-
-// functor that will listen for incoming messages
-class CListener {
-public:
-    CListener(SOCKET& s)
-        : m_socket(s) {}
-
-    void operator()() const
-    {
-        // receive first the message length, than the real message
-        int msgLength;
-        for (;;) {
-
-            if (SOCKET_ERROR == ::recv(m_socket, (char*)&msgLength, sizeof(int), NULL)) {
-                break;
-            }
-
-            std::vector<char> buffer(msgLength);
-
-            if (SOCKET_ERROR == ::recv(m_socket, &buffer[0], msgLength, NULL)) {
-                break;
-            }
-            std::cout << buffer << '\n'; // not threadsafe!
-        }
-        std::cout << "lost connection to the server!\n";
-        closesocket(m_socket);
-    }
-
-private:
-    SOCKET & m_socket;
-};
 
 class Client {
 public:
-    Client(int port) : m_port(port), m_socket(INVALID_SOCKET)
-    {
-        ZeroMemory(&m_address, sizeof(m_address));
-    }
 
-    ~Client()
-    {
-        closesocket(m_socket);
-        WSACleanup();
-    }
+    Client(int port);
+    ~Client();
 
-    void init()
-    {
-        // init winsock
-        WSADATA data = {};
-        WORD requestedVersion = MAKEWORD(2, 2);
-        int wsResult = WSAStartup(requestedVersion, &data);
-        if (wsResult != 0) {
-            std::exit(EXIT_FAILURE);
-        }
-    }
-
-    void connect(std::string ip)
-    {
-        // fill in a hint structure
-        m_address = {};
-        m_address.sin_family = AF_INET;
-        m_address.sin_port = htons(m_port); // host-to-network-short
-        inet_pton(AF_INET, ip.c_str(), &m_address.sin_addr);
-
-        // create socket
-        m_socket = socket(AF_INET, SOCK_STREAM, 0);
-        if (m_socket == INVALID_SOCKET) {
-            std::cerr << "Can't create socket, Err=" << WSAGetLastError() << '\n';
-            std::exit(EXIT_FAILURE);
-        }
-
-        // connect to server
-        int result = ::connect(m_socket, (sockaddr*)&m_address, sizeof(m_address));
-        if (result == SOCKET_ERROR) {
-            std::cerr << "Can't connect to server, Err=" << WSAGetLastError() << '\n';
-            std::exit(EXIT_FAILURE);
-        }
-    }
-
-    void listen()
-    {
-        // wait for a welcome message of the server
-        std::array<char, 512> answer{};
-        ::recv(m_socket, answer.data(), answer.size(), NULL);
-        std::cout << "From Server: " << answer.data() << '\n';
-
-        m_listener = std::thread(CListener{ m_socket });
-    }
-
-    void send(std::istream& in)
-    {
-        // - take input from std::cin
-        // - send the length of the input
-        // - send the input as msg
-        std::string message;
-        for (;;) {
-            std::getline(in, message);
-            send({ message });
-        }
-    }
+    void init();
+    void connect(std::string ip);
+    void listen();
+    void send(std::istream& in);
 
 protected:
 
@@ -123,19 +33,18 @@ protected:
     sockaddr_in m_address;
     std::thread m_listener;
 
-    void send(Message const& msg)
-    {
-        send(msg.length());
-        ::send(m_socket, msg.body(), msg.length(), NULL);
-    }
+    void send(Message const& msg);
+    bool send(int value);
+    bool get(int& value);
 
-    bool send(int value)
-    {
-        return ::send(m_socket, (char*)&value, sizeof(int), NULL) != SOCKET_ERROR;
-    }
+    // functor that will listen for incoming messages
+    class Listener final {
+    public:
+        Listener(SOCKET& s);
+        void operator()() const;
 
-    bool get(int& value)
-    {
-        return ::recv(m_socket, (char*)&value, sizeof(int), NULL) != SOCKET_ERROR;
-    }
+    private:
+        SOCKET & m_socket;
+    };
+
 };
