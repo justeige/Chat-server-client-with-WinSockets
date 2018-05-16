@@ -74,10 +74,33 @@ void Server::listen()
         char welcome[512] = "Welcome! You connected to the server!";
         ::send(newClient, welcome, sizeof(welcome), NULL);
 
-        const int id = m_clients.size();
-        Connection connection = { newClient, id, true };
-        m_clients.emplace_back(connection);
-        m_clientHandler.emplace_back(ClientHandler{ connection, m_clients });
+        // client handler share the m_clients, so lock it up
+        std::lock_guard<std::mutex> lock(m_lock);
+
+        Connection connection = {};
+        // try to reuse connection slots
+        if (m_usableSlot > 0) {
+            for (std::size_t i = 0; i < m_clients.size(); ++i) {
+                if (!m_clients[i].isActive) {
+                    m_clients[i].socket = newClient;
+                    m_clients[i].isActive = true;
+                    m_clients[i].id = i;
+                    m_usableSlot--;
+                    connection = m_clients[i];
+                    break;
+                }
+            }
+        }
+        else {
+            // no unused slots = create a complete new connection
+            const int id = m_clients.size();
+            connection = { newClient, id, true };
+            m_clients.emplace_back(connection);
+        }
+
+        // spawn a handler for incoming messages and resending to other clients
+        std::thread handler(ClientHandler{ connection, this });
+        handler.detach();
     }
 }
 
@@ -100,15 +123,43 @@ void Server::disconnectClient(int id)
     std::lock_guard<std::mutex> lock(m_lock);
 
     // sanity check: don't disconnect already closed connections
+    if (!m_clients[id].isActive) {
+        assert(false);
+        return;
+    }
 
+    // close the socket
+    m_clients[id].isActive = false;
+    ::closesocket(m_clients[id].socket);
+
+    // if the client that was disconnected was last, just free its memory
+    // if it wasn't, mark the place in the vector as 'usable' and use it for another client
+    if (id == m_clients.size() - 1) {
+        m_clients.pop_back();
+
+        // check if the connection-slots before are inactive aswell
+        // -> only consecutive inactive connections are interesting
+        // -> other slots will be filled later
+        for (std::size_t i = m_clients.size() - 1; i >= 0 && m_clients.size() > 0; i--) {
+            if (m_clients[i].isActive) {
+                break;
+            }
+
+            m_clients.pop_back();
+            m_usableSlot--;
+        }
+    }
+    else {
+        // can't be cleaned up right away
+        m_usableSlot++;
+    }
 }
-
 // ---------------------------------------------------------------
 // internal client handler class
 // ---------------------------------------------------------------
 
-Server::ClientHandler::ClientHandler(Connection c, Clients& other)
-    : m_connection(c), m_otherClients(other)
+Server::ClientHandler::ClientHandler(Connection c, Server* parent)
+    : m_connection(c), m_parent(parent)
 {
 }
 
@@ -131,13 +182,13 @@ void Server::ClientHandler::operator()() const
         }
 
         // parrot the message back to all other sockets
-        for (auto client : m_otherClients) {
+        for (auto client : m_parent->m_clients) {
             if (client.id == m_connection.id) { continue; } // don't 'echo' a client
 
             ::send(client.socket, (char*)&msgLength, sizeof(int), NULL);
             ::send(client.socket, &buffer[0], msgLength, NULL);
         }
     }
-    std::cout << "lost connection to a client!\n";
-    //closesocket(m_socket);
+    std::cout << "lost connection to client" << m_connection.id << "\n";
+    m_parent->disconnectClient(m_connection.id);
 }

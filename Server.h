@@ -15,7 +15,9 @@
 class Server {
 
     class  ClientHandler;
+    friend ClientHandler;
     struct Connection;
+
 
     // internal types
     enum AddressFamilySpecification {
@@ -35,13 +37,14 @@ public:
     void listen();
     void shutdown();
 
-protected:
+private:
     int m_port = 0;
     SOCKET m_socket;
     sockaddr_in m_address;
     Clients m_clients;
     Threads m_clientHandler;
     std::mutex m_lock;
+    int m_usableSlot = 0;
 
     // abstraction for connected clients
     struct Connection {
@@ -53,12 +56,12 @@ protected:
     // functor that will listen for incoming messages and send them to other clients
     class ClientHandler final {
     public:
-        ClientHandler(Connection c, Clients& other);
+        ClientHandler(Connection c, Server* parent);
         void operator()() const;
 
     private:
         Connection m_connection;
-        Clients& m_otherClients;
+        Server* m_parent;
     };
 
     // member functions
