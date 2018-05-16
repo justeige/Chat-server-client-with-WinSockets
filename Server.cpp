@@ -74,10 +74,10 @@ void Server::listen()
         char welcome[512] = "Welcome! You connected to the server!";
         ::send(newClient, welcome, sizeof(welcome), NULL);
 
-        m_clients.emplace_back(newClient);
-        const std::size_t id = m_clients.size();
-
-        m_clientHandler.emplace_back(ClientHandler{ newClient, id, m_clients });
+        const int id = m_clients.size();
+        Connection connection = { newClient, id, true };
+        m_clients.emplace_back(connection);
+        m_clientHandler.emplace_back(ClientHandler{ connection, m_clients });
     }
 }
 
@@ -92,11 +92,23 @@ void Server::shutdown()
 }
 
 // ---------------------------------------------------------------
+void Server::disconnectClient(int id)
+// ---------------------------------------------------------------
+{
+    // all client handler share the client list (I know its dangerous)
+    // so this function has to lock that resource up
+    std::lock_guard<std::mutex> lock(m_lock);
+
+    // sanity check: don't disconnect already closed connections
+
+}
+
+// ---------------------------------------------------------------
 // internal client handler class
 // ---------------------------------------------------------------
 
-Server::ClientHandler::ClientHandler(SOCKET& s, std::size_t id, Sockets& other)
-    : m_socket(s), m_id(id), m_otherClients(other)
+Server::ClientHandler::ClientHandler(Connection c, Clients& other)
+    : m_connection(c), m_otherClients(other)
 {
 }
 
@@ -108,24 +120,24 @@ void Server::ClientHandler::operator()() const
     int msgLength;
     forever {
 
-        if (SOCKET_ERROR == ::recv(m_socket, (char*)&msgLength, sizeof(int), NULL)) {
+        if (SOCKET_ERROR == ::recv(m_connection.socket, (char*)&msgLength, sizeof(int), NULL)) {
             break;
         }
 
         std::vector<char> buffer(msgLength);
 
-        if (SOCKET_ERROR == ::recv(m_socket, &buffer[0], msgLength, NULL)) {
+        if (SOCKET_ERROR == ::recv(m_connection.socket, &buffer[0], msgLength, NULL)) {
             break;
         }
 
         // parrot the message back to all other sockets
         for (auto client : m_otherClients) {
-            if (client == m_socket) { continue; } // don't 'echo' a client
+            if (client.id == m_connection.id) { continue; } // don't 'echo' a client
 
-            ::send(client, (char*)&msgLength, sizeof(int), NULL);
-            ::send(client, &buffer[0], msgLength, NULL);
+            ::send(client.socket, (char*)&msgLength, sizeof(int), NULL);
+            ::send(client.socket, &buffer[0], msgLength, NULL);
         }
     }
     std::cout << "lost connection to a client!\n";
-    closesocket(m_socket);
+    //closesocket(m_socket);
 }

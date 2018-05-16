@@ -7,7 +7,7 @@
 // external libs
 #pragma comment(lib, "ws2_32.lib")
 
-//#define IS_SERVER
+#define IS_SERVER
 
 int main(int argc, char** argv)
 {
