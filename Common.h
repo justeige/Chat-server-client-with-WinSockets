@@ -11,6 +11,7 @@
 
 
 const std::string LocalServer = "127.0.0.1";
+const int DefaultPort = 54000;
 
 inline std::ostream& operator << (std::ostream& os, std::vector<char> vec)
 {

@@ -12,12 +12,12 @@
 int main(int argc, char** argv)
 {
 #if defined(IS_SERVER)
-    Server server(54000);
+    Server server(DefaultPort);
     server.init();
     server.listen();
     server.shutdown();
 #else
-    Client client(54000);
+    Client client(DefaultPort);
     client.init();
     client.connect(LocalServer);
     client.listen();
