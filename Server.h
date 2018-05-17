@@ -4,7 +4,7 @@
 // -------------------------------------
 
 #include <WS2tcpip.h> // windows tcp
-#include <assert.h>
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -30,10 +30,12 @@ class Server {
     using Threads = std::vector<std::thread>;
 
 public:
-    Server(int port);
-    ~Server();
 
-    void init();
+    // functions might throw wsa-exceptions
+
+    Server(int port);
+    ~Server() noexcept;
+
     void listen();
     void shutdown();
 

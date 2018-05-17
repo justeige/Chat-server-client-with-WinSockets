@@ -6,6 +6,33 @@ Server::Server(int port) : m_port(port), m_socket(INVALID_SOCKET)
 // ---------------------------------------------------------------
 {
     ZeroMemory(&m_address, sizeof(m_address));
+
+    // init Winsock dll
+    WSADATA wsData = {};
+    if (0 != WSAStartup(MAKEWORD(2, 2), &wsData)) {
+        throw WsaException("Winsock init failed");
+    }
+
+    // create a socket for listening
+    m_socket = socket(AFS_IPv4, SOCK_STREAM, 0); // unspecified protokol = 0
+    if (m_socket == INVALID_SOCKET) {
+        throw WsaException("Creating listening socket failed");
+    }
+
+    // create an address for listening from ip/port
+    m_address.sin_family = AFS_IPv4;
+    m_address.sin_port = htons(m_port); // host-to-network-short
+    m_address.sin_addr.S_un.S_addr = INADDR_ANY;
+
+    // bind address to the socket
+    if (SOCKET_ERROR == bind(m_socket, (sockaddr*)&m_address, sizeof(m_address))) {
+        throw WsaException("Binding server address to socket failed");
+    }
+
+    // tell winsock the sock is for listening
+    if (SOCKET_ERROR == ::listen(m_socket, SOMAXCONN)) {
+        throw WsaException("Starting socket as a listener failed");
+    }
 }
 
 // ---------------------------------------------------------------
@@ -17,55 +44,21 @@ Server::~Server()
 }
 
 // ---------------------------------------------------------------
-void Server::init()
-// ---------------------------------------------------------------
-{
-    // init Winsock dll
-    WSADATA wsData = {};
-    if (0 != WSAStartup(MAKEWORD(2, 2), &wsData)) {
-        std::cerr << "Winsock init failed\n";
-        assert(false);
-        std::exit(EXIT_FAILURE);
-    }
-
-    // create a socket for listening
-    m_socket = socket(AFS_IPv4, SOCK_STREAM, 0); // unspecified protokol = 0
-    if (m_socket == INVALID_SOCKET) {
-        std::cerr << "Creating listening socket failed\n";
-        assert(false);
-        std::exit(EXIT_FAILURE);
-    }
-
-    // create an address for listening from ip/port
-    m_address.sin_family = AFS_IPv4;
-    m_address.sin_port = htons(m_port); // host-to-network-short
-    m_address.sin_addr.S_un.S_addr = INADDR_ANY;
-
-    // bind address to the socket
-    if (SOCKET_ERROR == bind(m_socket, (sockaddr*)&m_address, sizeof(m_address))) {
-        std::exit(EXIT_FAILURE);
-    }
-
-    // tell winsock the sock is for listening
-    if (SOCKET_ERROR == ::listen(m_socket, SOMAXCONN)) {
-        std::exit(EXIT_FAILURE);
-    }
-}
-
-// ---------------------------------------------------------------
 // wait for connections, then spawn a client handler for each
 // ---------------------------------------------------------------
 void Server::listen()
 // ---------------------------------------------------------------
 {
+    std::cout << "Server: Start to listen for clients\n";
+
     sockaddr_in client = {};
     int size = sizeof(client);
 
     for (;;) {
         SOCKET newClient = ::accept(m_socket, (sockaddr*)&client, &size);
         if (newClient == INVALID_SOCKET) {
-            std::cerr << "Client socket binding failed!\n";
-            std::exit(EXIT_FAILURE);
+            throw WsaException("Binding a client socket failed!");
+            return;
         }
 
         std::cout << "A client connected to the server!\n";
@@ -110,7 +103,7 @@ void Server::shutdown()
 {
     auto result = ::shutdown(m_socket, SD_SEND);
     if (result == SOCKET_ERROR) {
-        std::cerr << "shutdown failed: " << WSAGetLastError() << '\n';
+        throw WsaException("Server shutdown failed!");
     }
 }
 
@@ -124,7 +117,7 @@ void Server::disconnectClient(int id)
 
     // sanity check: don't disconnect already closed connections
     if (!m_clients[id].isActive) {
-        assert(false);
+        assert(false && "tried to disconnect an already closed connection");
         return;
     }
 
@@ -172,13 +165,13 @@ void Server::ClientHandler::operator()() const
     forever {
 
         if (SOCKET_ERROR == ::recv(m_connection.socket, (char*)&msgLength, sizeof(int), NULL)) {
-            break;
+            break; // might occur if the socket is closed
         }
 
         std::vector<char> buffer(msgLength);
 
         if (SOCKET_ERROR == ::recv(m_connection.socket, &buffer[0], msgLength, NULL)) {
-            break;
+            break; // might occur if the socket is closed
         }
 
         // parrot the message back to all other sockets
@@ -189,6 +182,6 @@ void Server::ClientHandler::operator()() const
             ::send(client.socket, &buffer[0], msgLength, NULL);
         }
     }
-    std::cout << "lost connection to client" << m_connection.id << "\n";
+    std::cout << "lost connection to client " << m_connection.id << "\n";
     m_parent->disconnectClient(m_connection.id);
 }

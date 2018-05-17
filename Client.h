@@ -21,8 +21,7 @@ public:
     Client(int port);
     ~Client();
 
-    void init();
-    void connect(std::string ip);
+    bool connect(std::string ip);
     void listen();
     void send(std::istream& in);
 

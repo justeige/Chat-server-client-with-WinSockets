@@ -6,6 +6,17 @@
 
 #include <string>
 #include <vector>
+#include <exception>
+
+// if win-socket functions fail that shouldn't ever fail (like init winsockets...)
+class WsaException : public std::runtime_error {
+public:
+    WsaException(std::string const& msg)
+        : std::runtime_error(msg + " : " + std::to_string(WSAGetLastError()))
+    {}
+};
+
+
 
 #define forever for (;;)
 
@@ -19,4 +30,9 @@ inline std::ostream& operator << (std::ostream& os, std::vector<char> vec)
         os << c;
     }
     return os;
+}
+
+inline void printError()
+{
+    std::cerr << "Error: " << WSAGetLastError() << '\n';
 }

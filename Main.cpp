@@ -11,17 +11,31 @@
 
 int main(int argc, char** argv)
 {
+    try {
+
 #if defined(IS_SERVER)
-    Server server(DefaultPort);
-    server.init();
-    server.listen();
-    server.shutdown();
+
+        Server server(DefaultPort);
+        server.listen();
+        server.shutdown();
+
 #else
-    Client client(DefaultPort);
-    client.init();
-    client.connect(LocalServer);
-    client.listen();
-    client.send(std::cin);
+        Client client(DefaultPort);
+        while (!client.connect(LocalServer)) {
+            std::cout << "Try to reconnect...\n";
+            Sleep(2000);
+        }
+        client.listen();
+        client.send(std::cin);
 #endif
+
+    }
+    catch (const std::exception& ex) {
+        std::cout << ex.what() << '\n';
+    }
+    catch (...) {
+        std::cout << "An unexpected exception happend!\n";
+    }
+
     return EXIT_SUCCESS;
 }

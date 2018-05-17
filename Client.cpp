@@ -6,6 +6,14 @@ Client::Client(int port) : m_port(port), m_socket(INVALID_SOCKET)
 // --------------------------------------------------------------
 {
     ZeroMemory(&m_address, sizeof(m_address));
+
+    // init winsock
+    WSADATA data = {};
+    WORD requestedVersion = MAKEWORD(2, 2);
+    int wsResult = WSAStartup(requestedVersion, &data);
+    if (wsResult != 0) {
+        throw WsaException("Failed to init Win-Sockets!");
+    }
 }
 
 // --------------------------------------------------------------
@@ -17,20 +25,7 @@ Client::~Client()
 }
 
 // --------------------------------------------------------------
-void Client::init()
-// --------------------------------------------------------------
-{
-    // init winsock
-    WSADATA data = {};
-    WORD requestedVersion = MAKEWORD(2, 2);
-    int wsResult = WSAStartup(requestedVersion, &data);
-    if (wsResult != 0) {
-        std::exit(EXIT_FAILURE);
-    }
-}
-
-// --------------------------------------------------------------
-void Client::connect(std::string ip)
+bool Client::connect(std::string ip)
 // --------------------------------------------------------------
 {
     // fill in a hint structure
@@ -42,16 +37,18 @@ void Client::connect(std::string ip)
     // create socket
     m_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (m_socket == INVALID_SOCKET) {
-        std::cerr << "Can't create socket, Err=" << WSAGetLastError() << '\n';
-        std::exit(EXIT_FAILURE);
+        throw WsaException("Can't create socket");
     }
 
     // connect to server
     int result = ::connect(m_socket, (sockaddr*)&m_address, sizeof(m_address));
     if (result == SOCKET_ERROR) {
         std::cerr << "Can't connect to server, Err=" << WSAGetLastError() << '\n';
-        std::exit(EXIT_FAILURE);
+        return false;
     }
+
+    // client should be connected to the server
+    return true;
 }
 
 // --------------------------------------------------------------
