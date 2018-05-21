@@ -11,6 +11,9 @@
 
 int main(int argc, char** argv)
 {
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+
     try {
 
 #if defined(IS_SERVER)

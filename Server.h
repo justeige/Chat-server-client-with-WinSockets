@@ -67,5 +67,5 @@ private:
     };
 
     // member functions
-    void disconnectClient(int id);
+    void disconnectClient(std::size_t id);
 };

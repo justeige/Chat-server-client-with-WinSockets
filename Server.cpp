@@ -54,7 +54,7 @@ void Server::listen()
     sockaddr_in client = {};
     int size = sizeof(client);
 
-    for (;;) {
+    forever {
         SOCKET newClient = ::accept(m_socket, (sockaddr*)&client, &size);
         if (newClient == INVALID_SOCKET) {
             throw WsaException("Binding a client socket failed!");
@@ -108,7 +108,7 @@ void Server::shutdown()
 }
 
 // ---------------------------------------------------------------
-void Server::disconnectClient(int id)
+void Server::disconnectClient(std::size_t id)
 // ---------------------------------------------------------------
 {
     // all client handler share the client list (I know its dangerous)
@@ -164,7 +164,7 @@ void Server::ClientHandler::operator()() const
     int msgLength;
     forever {
 
-        if (SOCKET_ERROR == ::recv(m_connection.socket, (char*)&msgLength, sizeof(int), NULL)) {
+        if (SOCKET_ERROR == ::recv(m_connection.socket, (char*)&msgLength, sizeof(msgLength), NULL)) {
             break; // might occur if the socket is closed
         }
 
@@ -178,7 +178,7 @@ void Server::ClientHandler::operator()() const
         for (auto client : m_parent->m_clients) {
             if (client.id == m_connection.id) { continue; } // don't 'echo' a client
 
-            ::send(client.socket, (char*)&msgLength, sizeof(int), NULL);
+            ::send(client.socket, (char*)&msgLength, sizeof(msgLength), NULL);
             ::send(client.socket, &buffer[0], msgLength, NULL);
         }
     }

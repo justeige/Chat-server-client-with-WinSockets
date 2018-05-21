@@ -31,8 +31,3 @@ inline std::ostream& operator << (std::ostream& os, std::vector<char> vec)
     }
     return os;
 }
-
-inline void printError()
-{
-    std::cerr << "Error: " << WSAGetLastError() << '\n';
-}

@@ -71,7 +71,7 @@ void Client::send(std::istream & in)
     // - send the length of the input
     // - send the input as msg
     std::string message;
-    for (;;) {
+    forever {
         std::getline(in, message);
         send({ message });
     }
@@ -89,14 +89,14 @@ void Client::send(Message const & msg)
 bool Client::send(int value)
 // --------------------------------------------------------------
 {
-    return ::send(m_socket, (char*)&value, sizeof(int), NULL) != SOCKET_ERROR;
+    return ::send(m_socket, (char*)&value, sizeof(value), NULL) != SOCKET_ERROR;
 }
 
 // --------------------------------------------------------------
 bool Client::get(int & value)
 // --------------------------------------------------------------
 {
-    return ::recv(m_socket, (char*)&value, sizeof(int), NULL) != SOCKET_ERROR;
+    return ::recv(m_socket, (char*)&value, sizeof(value), NULL) != SOCKET_ERROR;
 }
 
 
@@ -116,7 +116,7 @@ void Client::Listener::operator()() const
     int msgLength;
     forever {
 
-        if (SOCKET_ERROR == ::recv(m_socket, (char*)&msgLength, sizeof(int), NULL)) {
+        if (SOCKET_ERROR == ::recv(m_socket, (char*)&msgLength, sizeof(msgLength), NULL)) {
             break;
         }
 
