@@ -1,8 +1,4 @@
 #pragma once
-// -------------------------------------
-// simple winsocket client
-// -------------------------------------
-
 
 #include <WS2tcpip.h> // windows tcp
 #include <assert.h>
@@ -14,8 +10,11 @@
 
 #include "Message.h"
 
-
-class Client {
+// -------------------------------------------------------------------
+// Client (class): Basic implementation of a chat client.
+// Functions might throw wsa-exceptions in panic states.
+// -------------------------------------------------------------------
+class Client final {
 public:
 
     Client(int port);
@@ -25,10 +24,18 @@ public:
     void listen();
     void send(std::istream& in);
 
+    // no copies
+    Client(Client const&) = delete;
+    Client& operator=(Client const&) = delete;
+
+    // no moving
+    Client(Client&&) = delete;
+    Client& operator=(Client&&) = delete;
+
 protected:
 
-    int m_port;
-    SOCKET m_socket;
+    int         m_port;
+    SOCKET      m_socket;
     sockaddr_in m_address;
     std::thread m_listener;
 

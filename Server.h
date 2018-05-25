@@ -12,12 +12,16 @@
 #include <thread>
 #include <mutex>
 
-class Server {
+// -------------------------------------------------------------------
+// Server (class): Basic implementation of a chat server/ chat room.
+// Functions might throw wsa-exceptions in panic states
+// -------------------------------------------------------------------
+class Server final {
 
+    // friends / forward decls.
     class  ClientHandler;
     friend ClientHandler;
     struct Connection;
-
 
     // internal types
     enum AddressFamilySpecification {
@@ -31,22 +35,28 @@ class Server {
 
 public:
 
-    // functions might throw wsa-exceptions
-
     Server(int port);
     ~Server() noexcept;
 
     void listen();
     void shutdown();
 
+    // no copies
+    Server(Server const&)            = delete;
+    Server& operator=(Server const&) = delete;
+
+    // no moving
+    Server(Server&&)            = delete;
+    Server& operator=(Server&&) = delete;
+
 private:
-    int m_port = 0;
-    SOCKET m_socket;
+    int         m_port = 0;
+    SOCKET      m_socket;
     sockaddr_in m_address;
-    Clients m_clients;
-    Threads m_clientHandler;
-    std::mutex m_lock;
-    int m_usableSlot = 0;
+    Clients     m_clients;
+    Threads     m_clientHandler;
+    std::mutex  m_lock;
+    int         m_usableSlot = 0;
 
     // abstraction for connected clients
     struct Connection {
